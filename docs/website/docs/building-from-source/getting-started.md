@@ -120,7 +120,10 @@ settings can improve compile and link times substantially.
         -DIREE_ENABLE_SPLIT_DWARF=ON \
         -DCMAKE_C_COMPILER=clang \
         -DCMAKE_CXX_COMPILER=clang++ \
-        -DIREE_ENABLE_LLD=ON
+        -DIREE_ENABLE_LLD=ON \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        # ccache is optional, but will make repeat builds much faster
     ```
 
     It is also possible to add `-DIREE_ENABLE_THIN_ARCHIVES=ON` if the
