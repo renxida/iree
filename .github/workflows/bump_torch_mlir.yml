@@ -42,29 +42,29 @@ jobs:
       - name: Update torch-mlir submodule
         run: |
           git submodule update --init --depth 1 third_party/torch-mlir
-          - name: Bump torch-mlir submodule
-          id: bump_submodule
-          run: |
-            cd third_party/torch-mlir
-            git fetch origin
-            if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-              git checkout ${{ github.event.inputs.bump_target }}
-            else
-              git checkout origin/main
-            fi
-            TORCH_MLIR_COMMIT=$(git rev-parse HEAD)
-            cd ../..
-            
-            if git diff --quiet third_party/torch-mlir; then
-              echo "torch-mlir submodule is unchanged. Skipping PR creation."
-              echo "SHOULD_CREATE_PR=false" >> $GITHUB_OUTPUT
-            else
-              git add third_party/torch-mlir
-              git commit -m "Bump torch-mlir submodule to $TORCH_MLIR_COMMIT"
-              echo "TORCH_MLIR_COMMIT=$TORCH_MLIR_COMMIT" >> $GITHUB_OUTPUT
-              echo "SHOULD_CREATE_PR=true" >> $GITHUB_OUTPUT
-            fi
-            
+      - name: Bump torch-mlir submodule
+        id: bump_submodule
+        run: |
+          cd third_party/torch-mlir
+          git fetch origin
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            git checkout ${{ github.event.inputs.bump_target }}
+          else
+            git checkout origin/main
+          fi
+          TORCH_MLIR_COMMIT=$(git rev-parse HEAD)
+          cd ../..
+          
+          if git diff --quiet third_party/torch-mlir; then
+            echo "torch-mlir submodule is unchanged. Skipping PR creation."
+            echo "SHOULD_CREATE_PR=false" >> $GITHUB_OUTPUT
+          else
+            git add third_party/torch-mlir
+            git commit -m "Bump torch-mlir submodule to $TORCH_MLIR_COMMIT"
+            echo "TORCH_MLIR_COMMIT=$TORCH_MLIR_COMMIT" >> $GITHUB_OUTPUT
+            echo "SHOULD_CREATE_PR=true" >> $GITHUB_OUTPUT
+          fi
+          
       - name: Create Pull Request
         if: steps.bump_submodule.outputs.SHOULD_CREATE_PR == 'true'
         uses: peter-evans/create-pull-request@v6.0.5
