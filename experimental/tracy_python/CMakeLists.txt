@@ -65,11 +65,8 @@ iree_add_install_target(
 install(
   FILES
     README.md
-    example.py
-    test_tracy_python.py
+    demo.py
     build-tracy-python.sh
-    build-tracy-python-minimal.sh
-    build-tracy-python-full.sh
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/iree/experimental/tracy_python
   COMPONENT IREEExperimentalTracyPython
 )
@@ -104,7 +101,7 @@ install(
 # Add testing target
 add_test(
   NAME tracy_python_bindings_test
-  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_tracy_python.py
+  COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/demo.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 set_tests_properties(tracy_python_bindings_test PROPERTIES
