@@ -15,10 +15,11 @@ import numpy as np
 # Import the Tracy Python bindings
 try:
     # Try to import from tracy_client (the package name may vary depending on how it was built)
+    import sys
     from tracy_client import scoped
     tracy_module = "tracy_client"
     print(f"Successfully imported {tracy_module} Python bindings")
-except ImportError:
+except ImportError as e:
     try:
         # Try alternate import if the first one fails
         import tracy
@@ -26,7 +27,13 @@ except ImportError:
         print(f"Successfully imported {tracy_module} Python bindings")
     except ImportError:
         print("Tracy Python bindings not found. Make sure they are installed or in your PYTHONPATH.")
-        print("You can continue without tracing support.")
+        print("PYTHONPATH:", sys.path)
+        print("Python version:", sys.version)
+        print("\nTroubleshooting tips:")
+        print("1. Source the environment: source experimental/tracy_python/source_env.sh")
+        print("2. Make sure the Python version matches the one used to build the bindings")
+        print("3. Check if the bindings were built with TRACY_CLIENT_PYTHON=ON")
+        print("\nYou can continue without tracing support.")
         tracy_module = None
 
 # Try to import IREE's Python bindings
