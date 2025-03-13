@@ -12,16 +12,34 @@ This experimental feature enables Python applications using IREE to emit Tracy p
 
 ## Building Tracy Python Bindings
 
-Simply run the build script to build Tracy Python bindings:
+### Option 1: Enable during standard IREE build
+
+Add the Tracy Python flag when configuring your IREE build:
 
 ```bash
-# Build Tracy Python bindings
-./build-tracy-python.sh
+# Configure IREE with Tracy Python bindings
+cmake -B build -DIREE_ENABLE_RUNTIME_TRACING=ON -DIREE_TRACING_PROVIDER=tracy -DIREE_TRACY_ENABLE_PYTHON=ON ..
+
+# Build IREE (including Tracy Python bindings)
+cmake --build build
 ```
 
-This script will:
+Alternatively, you can just specify `-DIREE_TRACY_ENABLE_PYTHON=ON` and the other required flags will be enabled automatically.
+
+### Option 2: Add to an existing IREE build
+
+If you already have IREE built, you can use the build script to add Tracy Python bindings to your existing build:
+
+```bash
+# Build Tracy Python bindings with an existing IREE build
+./experimental/tracy_python/build-tracy-python.sh [path-to-existing-build-dir]
+```
+
+If you don't specify a build directory, the script will use `build` in your IREE root directory.
+
+The script will:
 1. Install required dependencies (pybind11, wheel, setuptools)
-2. Configure and build IREE with Tracy Python support
+2. Configure your IREE build with Tracy Python support (or create a new one if needed)
 3. Build the Tracy Python wheel
 4. Run the demo script to verify everything works
 
@@ -34,9 +52,6 @@ After building, you need to set your PYTHONPATH to use the Tracy Python bindings
 ```bash
 # Set PYTHONPATH to include Tracy Python bindings
 export PYTHONPATH=/path/to/iree/third_party/tracy/python:$PYTHONPATH
-
-# Run the demo
-python experimental/tracy_python/demo.py
 ```
 
 Alternatively, you can install the wheel:
@@ -96,13 +111,25 @@ device.flush_profiling()
 
 ### Demo
 
-See `demo.py` in this directory for a complete example of using Tracy Python bindings.
+Run the included demo to test your setup:
+
+```bash
+python experimental/tracy_python/demo.py
+```
 
 ## Viewing Traces
 
 1. Build and run the Tracy profiler (available from https://github.com/wolfpld/tracy)
 2. Run your Python application with Tracy Python bindings
 3. The Tracy profiler will automatically connect and display the timeline
+
+## CMake Build Targets
+
+When building with Tracy Python bindings enabled, the following targets are available:
+
+- `tracy-python-wheel`: Builds just the Tracy Python wheel
+- `iree-tracy-python`: Builds both TracyClient and the Python wheel
+- `tracy-python-dev`: Builds the wheel and prints setup instructions for development
 
 ## Troubleshooting
 
@@ -120,4 +147,4 @@ When building IREE with Tracy Python support, the following CMake options are re
 
 - `DIREE_ENABLE_RUNTIME_TRACING=ON`: Enable runtime tracing
 - `DIREE_TRACING_PROVIDER=tracy`: Use Tracy as the tracing provider
-- `DIREE_TRACY_ENABLE_PYTHON=ON`: Enable Tracy Python bindings
+- `DIREE_TRACY_ENABLE_PYTHON=ON`: Enable Tracy Python bindings (automatically enables the other options)

@@ -4,14 +4,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Set the package root for this experimental project
-set(IREE_PACKAGE_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
-cmake_path(ABSOLUTE_PATH IREE_PACKAGE_ROOT_DIR
-  BASE_DIRECTORY ${IREE_PACKAGE_ROOT_DIR}
-  NORMALIZE
-  OUTPUT_VARIABLE IREE_PACKAGE_ROOT_DIR)
-set(IREE_PACKAGE_ROOT_PREFIX iree)
-
+# Early exit if Tracy Python bindings are not enabled
 if(NOT (IREE_ENABLE_RUNTIME_TRACING AND IREE_TRACING_PROVIDER STREQUAL "tracy" AND IREE_TRACY_ENABLE_PYTHON))
   return()
 endif()
@@ -26,19 +19,25 @@ if(NOT Python3_FOUND)
 endif()
 
 #-------------------------------------------------------------------------------
+# Check Tracy build configuration
+#-------------------------------------------------------------------------------
+
+# Ensure Tracy library is configured to build with Python support
+if(NOT DEFINED TRACY_CLIENT_PYTHON)
+  set(TRACY_CLIENT_PYTHON ON CACHE BOOL "Build Tracy Python bindings" FORCE)
+endif()
+
+if(NOT DEFINED TRACY_STATIC)
+  set(TRACY_STATIC OFF CACHE BOOL "Build Tracy as a static library" FORCE)
+endif()
+
+#-------------------------------------------------------------------------------
 # Helper functions
 #-------------------------------------------------------------------------------
 
 # Gets the Tracy Python path for environment variables
 function(iree_get_tracy_python_path TRACY_PYTHON_PATH)
-  if((IREE_ENABLE_RUNTIME_TRACING OR IREE_ENABLE_COMPILER_TRACING) AND
-     IREE_TRACING_PROVIDER STREQUAL "tracy" AND
-     IREE_TRACY_ENABLE_PYTHON)
-    # Use the python directory as the primary path for developers
-    set(${TRACY_PYTHON_PATH} "${IREE_PACKAGE_ROOT_DIR}/third_party/tracy/python" PARENT_SCOPE)
-  else()
-    set(${TRACY_PYTHON_PATH} "" PARENT_SCOPE)
-  endif()
+  set(${TRACY_PYTHON_PATH} "${CMAKE_SOURCE_DIR}/third_party/tracy/python" PARENT_SCOPE)
 endfunction()
 
 # Adds Tracy Python path to PYTHONPATH if enabled
@@ -55,10 +54,15 @@ endfunction()
 # Installation and targets
 #-------------------------------------------------------------------------------
 
+# Make sure the TracyClient target exists
+if(NOT TARGET TracyClient)
+  message(WARNING "TracyClient target not found. Tracy Python bindings may not build correctly.")
+endif()
+
 # Create an installation target for Tracy Python
 iree_add_install_target(
-  NAME iree-install-tracy-python-experimental
-  COMPONENT IREEExperimentalTracyPython
+  NAME iree-install-tracy-python
+  COMPONENT IREETracyPython
 )
 
 # Install Tracy Python examples and scripts
@@ -68,22 +72,33 @@ install(
     demo.py
     build-tracy-python.sh
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/iree/experimental/tracy_python
-  COMPONENT IREEExperimentalTracyPython
+  COMPONENT IREETracyPython
 )
 
-# Add a target for building the Python wheel
+# Add a target for building the Python wheel that depends on the TracyClient library
 add_custom_target(tracy-python-wheel
+  COMMAND ${Python3_EXECUTABLE} -m pip install --upgrade pip pybind11 wheel setuptools
   COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel
-  WORKING_DIRECTORY ${IREE_PACKAGE_ROOT_DIR}/third_party/tracy/python
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/tracy/python
   COMMENT "Building Tracy Python wheel"
+  DEPENDS TracyClient
+  VERBATIM
+)
+
+# Add tracy-python-dev target for development that builds the wheel and exports PYTHONPATH
+add_custom_target(tracy-python-dev
+  COMMAND ${CMAKE_COMMAND} -E echo "Setting PYTHONPATH=${CMAKE_SOURCE_DIR}/third_party/tracy/python"
+  COMMAND ${CMAKE_COMMAND} -E echo "Run: export PYTHONPATH=${CMAKE_SOURCE_DIR}/third_party/tracy/python:\$$PYTHONPATH"
+  DEPENDS tracy-python-wheel
+  COMMENT "Tracy Python development setup complete"
   VERBATIM
 )
 
 # Install Python bindings
 install(
-  DIRECTORY ${IREE_PACKAGE_ROOT_DIR}/third_party/tracy/python/
+  DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/tracy/python/
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/tracy/python
-  COMPONENT IREEExperimentalTracyPython
+  COMPONENT IREETracyPython
   PATTERN "build" EXCLUDE
   PATTERN "dist" EXCLUDE
   PATTERN "__pycache__" EXCLUDE
@@ -92,18 +107,25 @@ install(
 
 # Install built wheel if available
 install(
-  DIRECTORY ${IREE_PACKAGE_ROOT_DIR}/third_party/tracy/python/dist/
+  DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/tracy/python/dist/
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/tracy/python/dist
-  COMPONENT IREEExperimentalTracyPython
+  COMPONENT IREETracyPython
   OPTIONAL
 )
 
-# Add testing target
+# Add testing target that only runs if tracy-python-wheel has been built
 add_test(
   NAME tracy_python_bindings_test
   COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/demo.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 set_tests_properties(tracy_python_bindings_test PROPERTIES
-  ENVIRONMENT "PYTHONPATH=${IREE_PACKAGE_ROOT_DIR}/third_party/tracy/python:$ENV{PYTHONPATH}"
+  ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/third_party/tracy/python:$ENV{PYTHONPATH}"
+  DEPENDS tracy-python-wheel
+)
+
+# Create a convenience target that builds Tracy client with Python bindings
+add_custom_target(iree-tracy-python ALL
+  DEPENDS TracyClient tracy-python-wheel
+  COMMENT "Building Tracy with Python bindings"
 )

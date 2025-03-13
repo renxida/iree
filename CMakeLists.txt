@@ -60,6 +60,18 @@ set(IREE_TRACING_PROVIDER_H "" CACHE STRING "Header file for custom tracing prov
 set(IREE_TRACING_MODE_DEFAULT "2" CACHE STRING "Default tracing feature/verbosity mode. See iree/base/tracing.h for more.")
 set(IREE_TRACING_MODE ${IREE_TRACING_MODE_DEFAULT} CACHE STRING "Tracing feature/verbosity mode. See iree/base/tracing.h for more.")
 option(IREE_TRACY_ENABLE_PYTHON "Enables Tracy Python bindings defined in experimental/tracy_python." OFF)
+# If IREE_TRACY_ENABLE_PYTHON is ON, make sure we're using tracy as the provider and tracing is enabled
+if(IREE_TRACY_ENABLE_PYTHON)
+  if(NOT IREE_ENABLE_RUNTIME_TRACING)
+    message(STATUS "Enabling IREE_ENABLE_RUNTIME_TRACING since IREE_TRACY_ENABLE_PYTHON is ON")
+    set(IREE_ENABLE_RUNTIME_TRACING ON CACHE BOOL "Enables instrumented runtime tracing." FORCE)
+  endif()
+  
+  if(NOT IREE_TRACING_PROVIDER STREQUAL "tracy")
+    message(STATUS "Setting IREE_TRACING_PROVIDER to 'tracy' since IREE_TRACY_ENABLE_PYTHON is ON")
+    set(IREE_TRACING_PROVIDER "tracy" CACHE STRING "Chooses which built-in tracing implementation is used when tracing is enabled." FORCE)
+  endif()
+endif()
 
 if(IREE_ENABLE_COMPILER_TRACING AND NOT IREE_ENABLE_RUNTIME_TRACING)
   message(SEND_ERROR
