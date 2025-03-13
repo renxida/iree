@@ -12,74 +12,39 @@ This experimental feature enables Python applications using IREE to emit Tracy p
 
 ## Building Tracy Python Bindings
 
-There are multiple ways to build Tracy Python bindings for use with IREE:
-
-### 1. Using build scripts
-
-For convenience, we provide scripts to build Tracy Python bindings:
+Simply run the build script to build Tracy Python bindings:
 
 ```bash
-# Build minimal configuration (runtime only)
-./build-tracy-python-minimal.sh
-
-# Build full configuration (runtime + compiler)
-./build-tracy-python-full.sh
-
-# Build standalone Tracy Python bindings
+# Build Tracy Python bindings
 ./build-tracy-python.sh
 ```
 
-### 2. Using CMake directly
-
-You can also build IREE with Tracy Python bindings enabled:
-
-```bash
-mkdir build && cd build
-cmake .. \
-    -DIREE_ENABLE_RUNTIME_TRACING=ON \
-    -DIREE_TRACING_PROVIDER=tracy \
-    -DIREE_TRACY_ENABLE_PYTHON=ON
-
-# Optionally enable compiler tracing
-# -DIREE_ENABLE_COMPILER_TRACING=ON
-
-cmake --build . --target TracyClient
-```
+This script will:
+1. Install required dependencies (pybind11, wheel, setuptools)
+2. Configure and build IREE with Tracy Python support
+3. Build the Tracy Python wheel
+4. Run the demo script to verify everything works
 
 ## Using Tracy Python Bindings
 
 ### Setting up the environment
 
-After building, you have several options to use the Tracy Python bindings:
-
-#### Option 1: Use the source environment script (recommended for development)
+After building, you need to set your PYTHONPATH to use the Tracy Python bindings:
 
 ```bash
-# Source the environment setup script
-source experimental/tracy_python/source_env.sh
-
-# Now you can run the example
-python experimental/tracy_python/example.py
-```
-
-#### Option 2: Set PYTHONPATH manually
-
-```bash
-# For development (without installing)
+# Set PYTHONPATH to include Tracy Python bindings
 export PYTHONPATH=/path/to/iree/third_party/tracy/python:$PYTHONPATH
 
-# Then run your Python script
-python your_script.py
+# Run the demo
+python experimental/tracy_python/demo.py
 ```
 
-#### Option 3: Install the wheel
+Alternatively, you can install the wheel:
 
 ```bash
-# Install the wheel system-wide or in your virtual environment
+# Install the wheel in your Python environment
 python -m pip install /path/to/iree/third_party/tracy/python/dist/tracy_client-*.whl
 ```
-
-> **Note**: Make sure the Python version you use matches the one used to build the bindings. The build scripts use pyenv to ensure version compatibility.
 
 ### Using in Python applications
 
@@ -107,65 +72,31 @@ except ImportError:
 
 ### Integration with IREE
 
-When using Tracy Python bindings with IREE, you can create a unified timeline view. Here's an example that shows how to profile both your Python code and IREE operations:
+When using Tracy Python bindings with IREE, you can create a unified timeline view:
 
 ```python
-import time
-import numpy as np
-
 # Import Tracy Python bindings
-try:
-    from tracy_client import scoped
-    tracy_available = True
-except ImportError:
-    tracy_available = False
+from tracy_client import scoped
 
 # Import IREE runtime
-from iree.runtime import load_vm_module, create_hal_device, VmModule
+from iree.runtime import create_hal_device
 
-def run_inference(compiled_module, inputs):
-    # Create a Tracy profiling zone for the entire function
-    zone = scoped.ScopedZone("IREE Inference", 0xFF0000) if tracy_available else None
-    
-    # Create device
-    device_zone = scoped.ScopedZone("Create Device", 0x00FF00) if tracy_available else None
+# Create a device with Tracy profiling
+with scoped.ScopedZone("Create Device", 0x00FF00):
     device = create_hal_device("local-task")
-    if device_zone:
-        del device_zone
-    
-    # Load module
-    load_zone = scoped.ScopedZone("Load Module", 0x0000FF) if tracy_available else None
-    ctx = create_context(device)
-    vm_module = VmModule.from_flatbuffer(ctx.instance, compiled_module)
-    ctx.add_vm_module(vm_module)
-    if load_zone:
-        del load_zone
-    
-    # Execute function
-    execute_zone = scoped.ScopedZone("Execute Function", 0xFFFF00) if tracy_available else None
-    function = ctx.modules.module["main"]
-    results = function(*inputs)
-    
-    # Flush profiling data (important for long-running applications)
-    device.flush_profiling()
-    
-    if execute_zone:
-        del execute_zone
-    
-    return results
-```
 
-Remember to flush the profiling data periodically for long-running applications:
+# Execute IREE functions
+with scoped.ScopedZone("Execute", 0xFF0000):
+    # Run your IREE code here
+    pass
 
-```python
-device = create_hal_device("local-task")
-# ... do some work ...
+# Flush profiling data (important for long-running applications)
 device.flush_profiling()
 ```
 
-### Complete example
+### Demo
 
-See `example.py` in this directory for a complete example of using Tracy Python bindings with IREE.
+See `demo.py` in this directory for a complete example of using Tracy Python bindings.
 
 ## Viewing Traces
 
@@ -175,29 +106,18 @@ See `example.py` in this directory for a complete example of using Tracy Python 
 
 ## Troubleshooting
 
-- If you see "Failed to import Tracy Python bindings" errors:
+- If you see "Tracy Python bindings not found" errors:
   - Check your PYTHONPATH environment variable includes the tracy/python directory
-  - Verify that the Python version used for running matches the version used for building
-  - Try using the source_env.sh script to set up your environment
-- If the bindings fail to build:
-  - Make sure TracyClient is built with TRACY_CLIENT_PYTHON=ON
-  - Ensure you have pybind11 installed (`pip install pybind11`)
-  - Check CMake output for any errors related to Python detection
+  - Verify the build completed successfully
 - If you don't see any profiling data:
   - Check that the Tracy profiler is running when your application executes
   - Make sure TRACY_NO_EXIT=1 is set if your application is short-lived
   - Call device.flush_profiling() to ensure data is sent to the profiler
-- Python version mismatches:
-  - The wheel is built for a specific Python version (e.g., 3.12)
-  - Use the same Python version for running as for building
-  - Use pyenv to maintain consistent Python environments
 
 ## Configuration Options
 
 When building IREE with Tracy Python support, the following CMake options are relevant:
 
 - `DIREE_ENABLE_RUNTIME_TRACING=ON`: Enable runtime tracing
-- `DIREE_ENABLE_COMPILER_TRACING=ON`: Enable compiler tracing
 - `DIREE_TRACING_PROVIDER=tracy`: Use Tracy as the tracing provider
 - `DIREE_TRACY_ENABLE_PYTHON=ON`: Enable Tracy Python bindings
-- `DIREE_TRACING_MODE`: Set tracing verbosity (default: 2)
