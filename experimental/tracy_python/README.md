@@ -50,15 +50,36 @@ cmake --build . --target TracyClient
 
 ### Setting up the environment
 
-After building, you need to add Tracy Python bindings to your PYTHONPATH:
+After building, you have several options to use the Tracy Python bindings:
+
+#### Option 1: Use the source environment script (recommended for development)
+
+```bash
+# Source the environment setup script
+source experimental/tracy_python/source_env.sh
+
+# Now you can run the example
+python experimental/tracy_python/example.py
+```
+
+#### Option 2: Set PYTHONPATH manually
 
 ```bash
 # For development (without installing)
 export PYTHONPATH=/path/to/iree/third_party/tracy/python:$PYTHONPATH
 
-# Or install the wheel
+# Then run your Python script
+python your_script.py
+```
+
+#### Option 3: Install the wheel
+
+```bash
+# Install the wheel system-wide or in your virtual environment
 python -m pip install /path/to/iree/third_party/tracy/python/dist/tracy_client-*.whl
 ```
+
+> **Note**: Make sure the Python version you use matches the one used to build the bindings. The build scripts use pyenv to ensure version compatibility.
 
 ### Using in Python applications
 
@@ -154,10 +175,22 @@ See `example.py` in this directory for a complete example of using Tracy Python 
 
 ## Troubleshooting
 
-- If you see "Failed to import Tracy Python bindings" errors, check your PYTHONPATH
-- Make sure TracyClient is built with TRACY_CLIENT_PYTHON=ON
-- Ensure you have pybind11 installed (`pip install pybind11`)
-- Check that the Tracy profiler is running when your application executes
+- If you see "Failed to import Tracy Python bindings" errors:
+  - Check your PYTHONPATH environment variable includes the tracy/python directory
+  - Verify that the Python version used for running matches the version used for building
+  - Try using the source_env.sh script to set up your environment
+- If the bindings fail to build:
+  - Make sure TracyClient is built with TRACY_CLIENT_PYTHON=ON
+  - Ensure you have pybind11 installed (`pip install pybind11`)
+  - Check CMake output for any errors related to Python detection
+- If you don't see any profiling data:
+  - Check that the Tracy profiler is running when your application executes
+  - Make sure TRACY_NO_EXIT=1 is set if your application is short-lived
+  - Call device.flush_profiling() to ensure data is sent to the profiler
+- Python version mismatches:
+  - The wheel is built for a specific Python version (e.g., 3.12)
+  - Use the same Python version for running as for building
+  - Use pyenv to maintain consistent Python environments
 
 ## Configuration Options
 
