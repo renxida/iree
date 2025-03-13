@@ -59,6 +59,7 @@ set(IREE_TRACING_PROVIDER ${IREE_TRACING_PROVIDER_DEFAULT} CACHE STRING "Chooses
 set(IREE_TRACING_PROVIDER_H "" CACHE STRING "Header file for custom tracing providers.")
 set(IREE_TRACING_MODE_DEFAULT "2" CACHE STRING "Default tracing feature/verbosity mode. See iree/base/tracing.h for more.")
 set(IREE_TRACING_MODE ${IREE_TRACING_MODE_DEFAULT} CACHE STRING "Tracing feature/verbosity mode. See iree/base/tracing.h for more.")
+option(IREE_TRACY_ENABLE_PYTHON "Enables Tracy Python bindings defined in experimental/tracy_python." OFF)
 
 if(IREE_ENABLE_COMPILER_TRACING AND NOT IREE_ENABLE_RUNTIME_TRACING)
   message(SEND_ERROR
@@ -873,6 +874,14 @@ if((IREE_ENABLE_RUNTIME_TRACING OR IREE_ENABLE_COMPILER_TRACING) AND
     IREE_TRACING_PROVIDER STREQUAL "tracy")
   message(STATUS "Configuring third_party/tracy")
   list(APPEND CMAKE_MESSAGE_INDENT "  ")
+  
+  if(IREE_TRACY_ENABLE_PYTHON)
+    # experimental/tracy_python allows adding Python app traces to the same tracy trace as IREE
+    set(TRACY_STATIC OFF CACHE BOOL "Build Tracy as a static library" FORCE)
+    set(TRACY_CLIENT_PYTHON ON CACHE BOOL "Build Tracy Python bindings" FORCE)
+    add_subdirectory(experimental/tracy_python)
+  endif()
+  
   add_subdirectory(third_party/tracy EXCLUDE_FROM_ALL)
   list(POP_BACK CMAKE_MESSAGE_INDENT)
   iree_install_targets(
