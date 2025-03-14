@@ -59,15 +59,16 @@ cd "$BUILD_DIR"
 cmake --build . --target tracy-python-wheel
 
 # Build Python wheel if the target didn't already build it
-if [ ! -d "$IREE_ROOT/third_party/tracy/python/dist" ] || [ -z "$(ls -A "$IREE_ROOT/third_party/tracy/python/dist")" ]; then
+if [ ! -d "$BUILD_DIR/experimental/tracy_python/dist" ] || [ -z "$(ls -A "$BUILD_DIR/experimental/tracy_python/dist")" ]; then
   echo "Building Tracy Python wheel..."
-  cd "$IREE_ROOT/third_party/tracy/python"
-  python setup.py bdist_wheel
+  # Run the CMake target to build the wheel
+  cd "$BUILD_DIR"
+  cmake --build . --target tracy-python-wheel
 fi
 
 # Setup environment
 cd "$IREE_ROOT"
-export PYTHONPATH="$IREE_ROOT/third_party/tracy/python:$PYTHONPATH"
+export PYTHONPATH="$BUILD_DIR/experimental/tracy_python:$PYTHONPATH"
 
 # Run the example script to verify everything works
 echo "Running demo script to verify Tracy Python bindings..."
@@ -76,10 +77,10 @@ python "$IREE_ROOT/experimental/tracy_python/demo.py"
 echo "Build completed successfully!"
 echo ""
 echo "To use Tracy Python bindings in your applications, run:"
-echo "export PYTHONPATH=\"$IREE_ROOT/third_party/tracy/python:\$PYTHONPATH\""
+echo "export PYTHONPATH=\"$BUILD_DIR/experimental/tracy_python:\$PYTHONPATH\""
 echo ""
 echo "Or install the wheel directly:"
-echo "python -m pip install $IREE_ROOT/third_party/tracy/python/dist/tracy_client-*.whl"
+echo "python -m pip install $BUILD_DIR/experimental/tracy_python/dist/tracy_client-*.whl"
 echo ""
 echo "To run the demo again:"
 echo "python $IREE_ROOT/experimental/tracy_python/demo.py"

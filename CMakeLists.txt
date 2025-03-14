@@ -63,13 +63,10 @@ option(IREE_TRACY_ENABLE_PYTHON "Enables Tracy Python bindings defined in experi
 # If IREE_TRACY_ENABLE_PYTHON is ON, make sure we're using tracy as the provider and tracing is enabled
 if(IREE_TRACY_ENABLE_PYTHON)
   if(NOT IREE_ENABLE_RUNTIME_TRACING)
-    message(STATUS "Enabling IREE_ENABLE_RUNTIME_TRACING since IREE_TRACY_ENABLE_PYTHON is ON")
-    set(IREE_ENABLE_RUNTIME_TRACING ON CACHE BOOL "Enables instrumented runtime tracing." FORCE)
+    message(FATAL_ERROR "IREE_TRACY_ENABLE_PYTHON requires IREE_ENABLE_RUNTIME_TRACING")
   endif()
-  
   if(NOT IREE_TRACING_PROVIDER STREQUAL "tracy")
-    message(STATUS "Setting IREE_TRACING_PROVIDER to 'tracy' since IREE_TRACY_ENABLE_PYTHON is ON")
-    set(IREE_TRACING_PROVIDER "tracy" CACHE STRING "Chooses which built-in tracing implementation is used when tracing is enabled." FORCE)
+    message(FATAL_ERROR "IREE_TRACY_ENABLE_PYTHON requires IREE_TRACING_PROVIDER=tracy")
   endif()
 endif()
 
@@ -1002,13 +999,21 @@ if(IREE_BUILD_PYTHON_BINDINGS)
   # Write out a .env file to make IDEs and developers happy.
   # Yes, we are writing this to the source dir. It is only for IDEs and if
   # it gets clobbered, it is fine (it is also ignored in .gitignore).
-  set(_PYTHONPATH_ENV "PYTHONPATH=$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}/compiler/bindings/python;${CMAKE_CURRENT_BINARY_DIR}/runtime/bindings/python>\n")
+  set(_PYTHONPATH_ENV_PATHS "${CMAKE_CURRENT_BINARY_DIR}/compiler/bindings/python;${CMAKE_CURRENT_BINARY_DIR}/runtime/bindings/python")
+  
+  # Add Tracy Python path if enabled
+  if(IREE_TRACY_ENABLE_PYTHON)
+    set(_PYTHONPATH_ENV_PATHS "${_PYTHONPATH_ENV_PATHS};${CMAKE_CURRENT_BINARY_DIR}/experimental/tracy_python")
+  endif()
+  
+  set(_PYTHONPATH_ENV "PYTHONPATH=$<SHELL_PATH:${_PYTHONPATH_ENV_PATHS}>\n")
   file(GENERATE OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/.env" CONTENT "${_PYTHONPATH_ENV}")
   file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/.env" CONTENT "${_PYTHONPATH_ENV}")
+  
   # Similarly, write out .env.bat and .env.ps1 for Windows.
-  set(_PYTHONPATH_ENV_BAT "set PYTHONPATH=$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}/compiler/bindings/python;${CMAKE_CURRENT_BINARY_DIR}/runtime/bindings/python>\n")
+  set(_PYTHONPATH_ENV_BAT "set PYTHONPATH=$<SHELL_PATH:${_PYTHONPATH_ENV_PATHS}>\n")
   file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/.env.bat" CONTENT "${_PYTHONPATH_ENV_BAT}")
-  set(_PYTHONPATH_ENV_PS1 "$env:PYTHONPATH = '$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}/compiler/bindings/python;${CMAKE_CURRENT_BINARY_DIR}/runtime/bindings/python>'\n")
+  set(_PYTHONPATH_ENV_PS1 "$env:PYTHONPATH = '$<SHELL_PATH:${_PYTHONPATH_ENV_PATHS}>'\n")
   file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/.env.ps1" CONTENT "${_PYTHONPATH_ENV_PS1}")
 endif()
 
