@@ -10,38 +10,18 @@ This experimental feature enables Python applications using IREE to emit Tracy p
 - See a unified timeline view spanning both your Python code and IREE's internal execution
 - Better understand performance bottlenecks across the entire application stack
 
-## Building Tracy Python Bindings
+## Building IREE with Tracy Python Bindings
 
-### Option 1: Enable during standard IREE build
-
-Add the Tracy Python flag when configuring your IREE build:
-
+Run:
 ```bash
-# Configure IREE with Tracy Python bindings
-cmake -B build -DIREE_ENABLE_RUNTIME_TRACING=ON -DIREE_TRACING_PROVIDER=tracy -DIREE_TRACY_ENABLE_PYTHON=ON ..
 
-# Build IREE (including Tracy Python bindings)
-cmake --build build
+cmake -G Ninja -B ../iree-build/ -S . \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DIREE_ENABLE_RUNTIME_TRACING=ON \
+    -DIREE_TRACING_MODE=4 \
+    -DIREE_TRACY_ENABLE_PYTHON=ON && \
+cmake --build ../iree-build/
 ```
-
-Alternatively, you can just specify `-DIREE_TRACY_ENABLE_PYTHON=ON` and the other required flags will be enabled automatically.
-
-### Option 2: Add to an existing IREE build
-
-If you already have IREE built, you can use the build script to add Tracy Python bindings to your existing build:
-
-```bash
-# Build Tracy Python bindings with an existing IREE build
-./experimental/tracy_python/build-tracy-python.sh [path-to-existing-build-dir]
-```
-
-If you don't specify a build directory, the script will use `build` in your IREE root directory.
-
-The script will:
-1. Install required dependencies (pybind11, wheel, setuptools)
-2. Configure your IREE build with Tracy Python support (or create a new one if needed)
-3. Build the Tracy Python wheel
-4. Run the demo script to verify everything works
 
 ## Using Tracy Python Bindings
 
@@ -63,7 +43,7 @@ python -m pip install /path/to/iree/third_party/tracy/python/dist/tracy_client-*
 
 ### Using in Python applications
 
-Here's a simple example of how to use Tracy Python bindings:
+Here's a simple example of how to use Tracy Python bindings (see [tracy's official documentations](https://github.com/wolfpld/tracy) for more info):
 
 ```python
 import time
@@ -84,44 +64,6 @@ except ImportError:
     # Fallback if Tracy Python bindings are not available
     print("Tracy Python bindings not available")
 ```
-
-### Integration with IREE
-
-When using Tracy Python bindings with IREE, you can create a unified timeline view:
-
-```python
-# Import Tracy Python bindings
-from tracy_client import scoped
-
-# Import IREE runtime
-from iree.runtime import create_hal_device
-
-# Create a device with Tracy profiling
-with scoped.ScopedZone("Create Device", 0x00FF00):
-    device = create_hal_device("local-task")
-
-# Execute IREE functions
-with scoped.ScopedZone("Execute", 0xFF0000):
-    # Run your IREE code here
-    pass
-
-# Flush profiling data (important for long-running applications)
-device.flush_profiling()
-```
-
-### Demo
-
-Run the included demo to test your setup:
-
-```bash
-python experimental/tracy_python/demo.py
-```
-
-## Viewing Traces
-
-1. Build and run the Tracy profiler (available from https://github.com/wolfpld/tracy)
-2. Run your Python application with Tracy Python bindings
-3. The Tracy profiler will automatically connect and display the timeline
 
 ## CMake Build Targets
 
@@ -145,6 +87,8 @@ When building with Tracy Python bindings enabled, the following targets are avai
 
 When building IREE with Tracy Python support, the following CMake options are relevant:
 
-- `DIREE_ENABLE_RUNTIME_TRACING=ON`: Enable runtime tracing
-- `DIREE_TRACING_PROVIDER=tracy`: Use Tracy as the tracing provider
-- `DIREE_TRACY_ENABLE_PYTHON=ON`: Enable Tracy Python bindings (automatically enables the other options)
+- `-DIREE_ENABLE_RUNTIME_TRACING=ON`: Enable runtime tracing
+- `-DIREE_TRACING_PROVIDER=tracy`: Use Tracy as the tracing provider
+- `-DIREE_TRACY_ENABLE_PYTHON=ON`: Enable Tracy Python bindings (automatically enables the other options)
+
+Note: Enabling `-DIREE_TRACY_ENABLE_PYTHON=ON` will cause `TRACY_STATIC` to be set to `OFF`, which may cause problems.

@@ -87,7 +87,7 @@ add_custom_target(tracy-python-wheel
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:TracyClient> ${CMAKE_BINARY_DIR}/experimental/tracy_python/tracy_client/
   # Copy setup.py and other files needed for installation
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/third_party/tracy/python/setup.py ${CMAKE_BINARY_DIR}/experimental/tracy_python/setup.py
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/third_party/tracy/python/README.md ${CMAKE_BINARY_DIR}/experimental/tracy_python/README.md
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/README.md ${CMAKE_BINARY_DIR}/experimental/tracy_python/README.md
   # Build wheel in the binary directory
   COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel --dist-dir=${CMAKE_BINARY_DIR}/experimental/tracy_python/dist
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/experimental/tracy_python
