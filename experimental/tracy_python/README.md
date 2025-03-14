@@ -12,9 +12,15 @@ This experimental feature enables Python applications using IREE to emit Tracy p
 
 ## Building IREE with Tracy Python Bindings
 
-Run:
+First, apply the necessary patches to the Tracy submodule:
 ```bash
+# Apply the required patches to Tracy
+cd /path/to/iree/third_party
+./apply_tracy_patches.sh
+```
 
+Then build with CMake:
+```bash
 cmake -G Ninja -B ../iree-build/ -S . \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DIREE_ENABLE_RUNTIME_TRACING=ON \
