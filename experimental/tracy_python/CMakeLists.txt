@@ -78,17 +78,28 @@ install(
 # Add a target for building the Python wheel that depends on the TracyClient library
 add_custom_target(tracy-python-wheel
   COMMAND ${Python3_EXECUTABLE} -m pip install --upgrade pip pybind11 wheel setuptools
-  COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/tracy/python
+  # Create build directories in the binary dir
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/experimental/tracy_python/dist
+  # Copy Python module to build directory to maintain consistent structure
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/third_party/tracy/python/tracy_client ${CMAKE_BINARY_DIR}/experimental/tracy_python/tracy_client
+  # Copy the native binding and library to build directory (required by Python module to load)
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:TracyClientBindings> ${CMAKE_BINARY_DIR}/experimental/tracy_python/tracy_client/
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:TracyClient> ${CMAKE_BINARY_DIR}/experimental/tracy_python/tracy_client/
+  # Copy setup.py and other files needed for installation
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/third_party/tracy/python/setup.py ${CMAKE_BINARY_DIR}/experimental/tracy_python/setup.py
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/third_party/tracy/python/README.md ${CMAKE_BINARY_DIR}/experimental/tracy_python/README.md
+  # Build wheel in the binary directory
+  COMMAND ${Python3_EXECUTABLE} setup.py bdist_wheel --dist-dir=${CMAKE_BINARY_DIR}/experimental/tracy_python/dist
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/experimental/tracy_python
   COMMENT "Building Tracy Python wheel"
-  DEPENDS TracyClient
+  DEPENDS TracyClient TracyClientBindings
   VERBATIM
 )
 
 # Add tracy-python-dev target for development that builds the wheel and exports PYTHONPATH
 add_custom_target(tracy-python-dev
-  COMMAND ${CMAKE_COMMAND} -E echo "Setting PYTHONPATH=${CMAKE_SOURCE_DIR}/third_party/tracy/python"
-  COMMAND ${CMAKE_COMMAND} -E echo "Run: export PYTHONPATH=${CMAKE_SOURCE_DIR}/third_party/tracy/python:\$$PYTHONPATH"
+  COMMAND ${CMAKE_COMMAND} -E echo "Setting PYTHONPATH=${CMAKE_BINARY_DIR}/experimental/tracy_python"
+  COMMAND ${CMAKE_COMMAND} -E echo "Run: export PYTHONPATH=${CMAKE_BINARY_DIR}/experimental/tracy_python:\$$PYTHONPATH"
   DEPENDS tracy-python-wheel
   COMMENT "Tracy Python development setup complete"
   VERBATIM
@@ -107,7 +118,7 @@ install(
 
 # Install built wheel if available
 install(
-  DIRECTORY ${CMAKE_SOURCE_DIR}/third_party/tracy/python/dist/
+  DIRECTORY ${CMAKE_BINARY_DIR}/experimental/tracy_python/dist/
   DESTINATION ${CMAKE_INSTALL_PREFIX}/share/tracy/python/dist
   COMPONENT IREETracyPython
   OPTIONAL
@@ -120,7 +131,7 @@ add_test(
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 set_tests_properties(tracy_python_bindings_test PROPERTIES
-  ENVIRONMENT "PYTHONPATH=${CMAKE_SOURCE_DIR}/third_party/tracy/python:$ENV{PYTHONPATH}"
+  ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR}/experimental/tracy_python:$ENV{PYTHONPATH}"
   DEPENDS tracy-python-wheel
 )
 
